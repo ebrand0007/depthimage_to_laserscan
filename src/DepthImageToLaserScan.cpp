@@ -80,8 +80,8 @@ bool DepthImageToLaserScan::use_point(const float new_value, const float old_val
   return shorter_check;
 }
 
-sensor_msgs::LaserScanPtr DepthImageToLaserScan::convert_msg(const sensor_msgs::ImageConstPtr& depth_msg,
-	      const sensor_msgs::CameraInfoConstPtr& info_msg){
+void DepthImageToLaserScan::convert_msg(const sensor_msgs::ImageConstPtr& depth_msg,
+	      const sensor_msgs::CameraInfoConstPtr& info_msg, const sensor_msgs::LaserScanPtr& obstacle_msg, const sensor_msgs::LaserScanPtr& floor_msg){
   // Set camera model
   cam_model_.fromCameraInfo(info_msg);
   
@@ -102,19 +102,18 @@ sensor_msgs::LaserScanPtr DepthImageToLaserScan::convert_msg(const sensor_msgs::
   double angle_min = -angle_between_rays(center_ray, right_ray); // Negative because the laserscan message expects an opposite rotation of that from the depth image
   
   // Fill in laserscan message
-  sensor_msgs::LaserScanPtr scan_msg(new sensor_msgs::LaserScan());
-  scan_msg->header = depth_msg->header;
+  obstacle_msg->header = depth_msg->header;
   if(output_frame_id_.length() > 0){
-    scan_msg->header.frame_id = output_frame_id_;
+    obstacle_msg->header.frame_id = output_frame_id_;
   }
-  scan_msg->angle_min = angle_min;
-  scan_msg->angle_max = angle_max;
-  scan_msg->angle_increment = (scan_msg->angle_max - scan_msg->angle_min) / (depth_msg->width - 1);
-  scan_msg->time_increment = 0.0;
-  scan_msg->scan_time = scan_time_;
-  scan_msg->range_min = range_min_;
-  scan_msg->range_max = range_max_;
-  
+  obstacle_msg->angle_min = angle_min;
+  obstacle_msg->angle_max = angle_max;
+  obstacle_msg->angle_increment = (obstacle_msg->angle_max - obstacle_msg->angle_min) / (depth_msg->width - 1);
+  obstacle_msg->time_increment = 0.0;
+  obstacle_msg->scan_time = scan_time_;
+  obstacle_msg->range_min = range_min_;
+  obstacle_msg->range_max = range_max_;
+
   // Check scan_height vs image_height
   if(scan_height_/2 > cam_model_.cy() || scan_height_/2 > depth_msg->height - cam_model_.cy()){
     std::stringstream ss;
@@ -124,15 +123,18 @@ sensor_msgs::LaserScanPtr DepthImageToLaserScan::convert_msg(const sensor_msgs::
 
   // Calculate and fill the ranges
   uint32_t ranges_size = depth_msg->width;
-  scan_msg->ranges.assign(ranges_size, std::numeric_limits<float>::quiet_NaN());
-  
+  obstacle_msg->ranges.assign(ranges_size, std::numeric_limits<float>::quiet_NaN());
+  *floor_msg = *obstacle_msg;
+
   if (depth_msg->encoding == sensor_msgs::image_encodings::TYPE_16UC1)
   {
-    convert<uint16_t>(depth_msg, cam_model_, scan_msg, scan_height_);
+    convert<uint16_t>(depth_msg, cam_model_, obstacle_msg, scan_height_);
+    convert_floor<uint16_t>(depth_msg, cam_model_, floor_msg, scan_height_);
   }
   else if (depth_msg->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
   {
-    convert<float>(depth_msg, cam_model_, scan_msg, scan_height_);
+    convert<float>(depth_msg, cam_model_, obstacle_msg, scan_height_);
+    convert<uint16_t>(depth_msg, cam_model_, floor_msg, scan_height_);
   }
   else
   {
@@ -141,7 +143,6 @@ sensor_msgs::LaserScanPtr DepthImageToLaserScan::convert_msg(const sensor_msgs::
     throw std::runtime_error(ss.str());
   }
   
-  return scan_msg;
 }
 
 void DepthImageToLaserScan::set_scan_time(const float scan_time){

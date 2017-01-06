@@ -97,6 +97,7 @@ namespace depthimage_to_laserscan
     image_transport::ImageTransport it_; ///< Subscribes to synchronized Image CameraInfo pairs.
     image_transport::CameraSubscriber sub_; ///< Subscriber for image_transport
     ros::Publisher pub_; ///< Publisher for output LaserScan messages
+    ros::Publisher floor_pub_; ///< Publisher for output floor LaserScan messages
     dynamic_reconfigure::Server<depthimage_to_laserscan::DepthConfig> srv_; ///< Dynamic reconfigure server
     
     depthimage_to_laserscan::DepthImageToLaserScan dtl_; ///< Instance of the DepthImageToLaserScan conversion class.
