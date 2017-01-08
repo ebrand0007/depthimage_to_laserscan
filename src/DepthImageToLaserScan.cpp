@@ -81,7 +81,7 @@ bool DepthImageToLaserScan::use_point(const float new_value, const float old_val
 }
 
 void DepthImageToLaserScan::convert_msg(const sensor_msgs::ImageConstPtr& depth_msg,
-	      const sensor_msgs::CameraInfoConstPtr& info_msg, const sensor_msgs::LaserScanPtr& obstacle_msg, const sensor_msgs::LaserScanPtr& floor_msg){
+	      const sensor_msgs::CameraInfoConstPtr& info_msg, const sensor_msgs::LaserScanPtr& obstacle_msg, const sensor_msgs::LaserScanPtr& stair_msg){
   // Set camera model
   cam_model_.fromCameraInfo(info_msg);
   
@@ -124,17 +124,22 @@ void DepthImageToLaserScan::convert_msg(const sensor_msgs::ImageConstPtr& depth_
   // Calculate and fill the ranges
   uint32_t ranges_size = depth_msg->width;
   obstacle_msg->ranges.assign(ranges_size, std::numeric_limits<float>::quiet_NaN());
-  *floor_msg = *obstacle_msg;
+
+  *stair_msg = *obstacle_msg;
 
   if (depth_msg->encoding == sensor_msgs::image_encodings::TYPE_16UC1)
   {
     convert<uint16_t>(depth_msg, cam_model_, obstacle_msg, scan_height_);
-    convert_floor<uint16_t>(depth_msg, cam_model_, floor_msg, scan_height_);
+    if(detect_stair_){
+      convert_stair<uint16_t>(depth_msg, cam_model_, stair_msg, scan_height_);
+    }
   }
   else if (depth_msg->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
   {
     convert<float>(depth_msg, cam_model_, obstacle_msg, scan_height_);
-    convert<uint16_t>(depth_msg, cam_model_, floor_msg, scan_height_);
+    if(detect_stair_){
+      convert_stair<uint16_t>(depth_msg, cam_model_, stair_msg, scan_height_);
+    }
   }
   else
   {
@@ -165,4 +170,10 @@ void DepthImageToLaserScan::set_output_frame(const std::string output_frame_id){
 void DepthImageToLaserScan::set_height_limits(const float height_min, const float height_max){
   height_min_ = height_min;
   height_max_ = height_max;
+}
+
+void DepthImageToLaserScan::set_stair_laser(const bool detect_stair, const int stair_scan_height, const float stair_height_th){
+  detect_stair_ = detect_stair;
+  stair_scan_height_ = stair_scan_height;
+  stair_height_th_ = stair_height_th;
 }

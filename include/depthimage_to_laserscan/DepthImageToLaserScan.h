@@ -66,7 +66,7 @@ namespace depthimage_to_laserscan
      * 
      */
     void convert_msg(const sensor_msgs::ImageConstPtr& depth_msg,
-					   const sensor_msgs::CameraInfoConstPtr& info_msg, const sensor_msgs::LaserScanPtr& obstacle_scan, const sensor_msgs::LaserScanPtr& floor_scan);
+					   const sensor_msgs::CameraInfoConstPtr& info_msg, const sensor_msgs::LaserScanPtr& obstacle_scan, const sensor_msgs::LaserScanPtr& stair_scan);
     
     /**
      * Sets the scan time parameter.
@@ -124,6 +124,7 @@ namespace depthimage_to_laserscan
      */
     void set_height_limits(const float height_min, const float height_max);
 
+    void set_stair_laser(const bool detect_stair, const int stair_scan_height, const float stair_height_th);
   private:
 
     /**
@@ -258,7 +259,7 @@ namespace depthimage_to_laserscan
     }
 
     template<typename T>
-    void convert_floor(const sensor_msgs::ImageConstPtr& depth_msg, const image_geometry::PinholeCameraModel& cam_model, 
+    void convert_stair(const sensor_msgs::ImageConstPtr& depth_msg, const image_geometry::PinholeCameraModel& cam_model,
 		 const sensor_msgs::LaserScanPtr& scan_msg, const int& scan_height) const{
       // Use correct principal point from calibration
       // Since we setup the camera upside down, the principle point shifts.
@@ -289,12 +290,8 @@ namespace depthimage_to_laserscan
       double tf_origin_z = transform.getOrigin().z();
 
       // determine lower bound and upper_bound of pixel row to scan
-      // given height_min_, range_min_ and range_max_, calculate the corresponding row in the image and start depth image conversion from there
       int lower_bound = 0;
-      int upper_bound = 100;
-      
-      //ROS_DEBUG("upper_bound and lower_bound of depth image are set to: %d and %d", upper_bound, lower_bound);
-
+      int upper_bound = 0 + stair_scan_height_;
       depth_row += lower_bound * row_step; // Offset to starting pixel
 
       for(int v = lower_bound; v < upper_bound; v++, depth_row += row_step){
@@ -319,7 +316,7 @@ namespace depthimage_to_laserscan
 
             double rectified_height = x * tf_basis_2_0 + y * tf_basis_2_1 + z * tf_basis_2_2 + tf_origin_z;
 
-            if( rectified_height > -0.1){
+            if( rectified_height > stair_height_th_){
               continue;
             }
 
@@ -347,6 +344,9 @@ namespace depthimage_to_laserscan
     tf::TransformListener listener_; ///< TF listener for retrieving transform between frames.
     float height_min_; ///< height threshold for rectified laser point
     float height_max_;
+    bool detect_stair_;
+    float stair_height_th_;
+    float stair_scan_height_;
   };
   
   
