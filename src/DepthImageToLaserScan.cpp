@@ -138,7 +138,7 @@ void DepthImageToLaserScan::convert_msg(const sensor_msgs::ImageConstPtr& depth_
   {
     convert<float>(depth_msg, cam_model_, obstacle_msg, scan_height_);
     if(detect_stair_){
-      convert_stair<uint16_t>(depth_msg, cam_model_, stair_msg, scan_height_);
+      convert_stair<float>(depth_msg, cam_model_, stair_msg, scan_height_);
     }
   }
   else
@@ -172,8 +172,9 @@ void DepthImageToLaserScan::set_height_limits(const float height_min, const floa
   height_max_ = height_max;
 }
 
-void DepthImageToLaserScan::set_stair_laser(const bool detect_stair, const int stair_scan_height, const float stair_height_th){
+void DepthImageToLaserScan::set_stair_laser(const bool detect_stair, const int stair_scan_height, const float stair_height_th, const float laser_dist_offset){
   detect_stair_ = detect_stair;
   stair_scan_height_ = stair_scan_height;
   stair_height_th_ = stair_height_th;
+  laser_dist_offset_ = laser_dist_offset;
 }

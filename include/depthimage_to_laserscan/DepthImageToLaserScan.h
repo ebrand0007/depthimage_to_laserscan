@@ -124,7 +124,16 @@ namespace depthimage_to_laserscan
      */
     void set_height_limits(const float height_min, const float height_max);
 
-    void set_stair_laser(const bool detect_stair, const int stair_scan_height, const float stair_height_th);
+    /**
+     * Receives stair laserscan parameters, such as band height, stair threshold.
+     *
+     * @param detect_stair Flag to determine whether detecting the stair.
+     * @param stair_scan_height The number of image rows to scan.
+     * @param stair_height_threshold The height threshold for stair.
+     * @param laser_dist_offset The offset distance while generating the laser scan.
+     */
+    void set_stair_laser(const bool detect_stair, const int stair_scan_height, const float stair_height_th, const float laser_dist_offset);
+
   private:
 
     /**
@@ -168,7 +177,7 @@ namespace depthimage_to_laserscan
 
     /**
     * Converts the depth image to a laserscan using the DepthTraits to assist.
-    * 
+    *
     * This uses a method to inverse project each pixel into a LaserScan angular increment.  This method first projects the pixel
     * forward into Cartesian coordinates, then calculates the range and angle for this point.  When multiple points coorespond to
     * a specific angular measurement, then the shortest range is used.
@@ -213,6 +222,7 @@ namespace depthimage_to_laserscan
       // determine lower bound and upper_bound of pixel row to scan
       // given height_min_, range_min_ and range_max_, calculate the corresponding row in the image and start depth image conversion from there
       int lower_bound = (height_min_ - tf_origin_z) / range_min_ / 1000 / constant_y + center_y;
+      lower_bound = std::max(0, lower_bound);
       int upper_bound = (height_max_ - tf_origin_z) / range_min_ / 1000 / constant_y + center_y;
       upper_bound = std::min(lower_bound + scan_height, std::min(upper_bound, (int)depth_msg->height));
 
@@ -258,9 +268,17 @@ namespace depthimage_to_laserscan
       }
     }
 
+   /**
+    * Converts the depth image to a stair laserscan using the DepthTraits to assist. The basic logic is similar to convert().
+    *
+    * @param depth_msg The UInt16 or Float32 encoded depth message.
+    * @param cam_model The image_geometry camera model for this image.
+    * @param scan_msg The output LaserScan.
+    * @param stair_scan_height The number of vertical pixels to feed into each angular_measurement.
+    */
     template<typename T>
     void convert_stair(const sensor_msgs::ImageConstPtr& depth_msg, const image_geometry::PinholeCameraModel& cam_model,
-		 const sensor_msgs::LaserScanPtr& scan_msg, const int& scan_height) const{
+		 const sensor_msgs::LaserScanPtr& scan_msg, const int& stair_scan_height) const{
       // Use correct principal point from calibration
       // Since we setup the camera upside down, the principle point shifts.
       float center_x = depth_msg->width - cam_model.cx();
@@ -289,9 +307,9 @@ namespace depthimage_to_laserscan
       double tf_basis_2_2 = transform.getBasis()[2][2];
       double tf_origin_z = transform.getOrigin().z();
 
-      // determine lower bound and upper_bound of pixel row to scan
+      // determine lower bound and upper_bound of pixel row to scan. Starts from bottom row to the assigned scan height
       int lower_bound = 0;
-      int upper_bound = 0 + stair_scan_height_;
+      int upper_bound = 0 + stair_scan_height;
       depth_row += lower_bound * row_step; // Offset to starting pixel
 
       for(int v = lower_bound; v < upper_bound; v++, depth_row += row_step){
@@ -316,7 +334,7 @@ namespace depthimage_to_laserscan
 
             double rectified_height = x * tf_basis_2_0 + y * tf_basis_2_1 + z * tf_basis_2_2 + tf_origin_z;
 
-            if( rectified_height > stair_height_th_){
+            if( rectified_height > stair_height_th_ ){
               continue;
             }
 
@@ -325,7 +343,7 @@ namespace depthimage_to_laserscan
 
 	    // Determine if this point should be used.
 	    if(use_point(r, scan_msg->ranges[index], scan_msg->range_min, scan_msg->range_max)){
-	      scan_msg->ranges[index] = r;
+	      scan_msg->ranges[index] = r - laser_dist_offset_;
 	    }
           }
 	}
@@ -342,11 +360,12 @@ namespace depthimage_to_laserscan
     int scan_height_; ///< Number of pixel rows to use when producing a laserscan from an area.
     std::string output_frame_id_; ///< Output frame_id for each laserscan.  This is likely NOT the camera's frame_id.
     tf::TransformListener listener_; ///< TF listener for retrieving transform between frames.
-    float height_min_; ///< height threshold for rectified laser point
+    float height_min_; ///< Height threshold for rectified laser point
     float height_max_;
-    bool detect_stair_;
-    float stair_height_th_;
-    float stair_scan_height_;
+    bool detect_stair_; ///< Flag to process stair_laserscan
+    float stair_height_th_; ///< Height threshold to determine stair/ lack of floor
+    float stair_scan_height_; ///< Number of pixel rows to use
+    float laser_dist_offset_; ///< Distance offset from the true measured distance
   };
   
   

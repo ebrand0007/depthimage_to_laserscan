@@ -93,5 +93,5 @@ void DepthImageToLaserScanROS::reconfigureCb(depthimage_to_laserscan::DepthConfi
     dtl_.set_scan_height(config.scan_height);
     dtl_.set_output_frame(config.output_frame_id);
     dtl_.set_height_limits(config.height_min, config.height_max);
-    dtl_.set_stair_laser(config.detect_stair, config.stair_scan_height, config.stair_height_th);
+    dtl_.set_stair_laser(config.detect_stair, config.stair_scan_height, config.stair_height_th, config.laser_dist_offset);
 }
