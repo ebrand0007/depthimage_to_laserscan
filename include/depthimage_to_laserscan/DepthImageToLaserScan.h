@@ -343,7 +343,8 @@ namespace depthimage_to_laserscan
 
 	    // Determine if this point should be used.
 	    if(use_point(r, scan_msg->ranges[index], scan_msg->range_min, scan_msg->range_max)){
-	      scan_msg->ranges[index] = r - laser_dist_offset_;
+              // apply an offset on the measured reading if necessary
+	      scan_msg->ranges[index] = r + laser_dist_offset_;
 	    }
           }
 	}
