@@ -44,7 +44,7 @@ DepthImageToLaserScanROS::DepthImageToLaserScanROS(ros::NodeHandle& n, ros::Node
   srv_.setCallback(f);
   
   // Lazy subscription to depth image topic
-  pub_ = n.advertise<sensor_msgs::LaserScan>("scan", 10, boost::bind(&DepthImageToLaserScanROS::connectCb, this, _1), boost::bind(&DepthImageToLaserScanROS::disconnectCb, this, _1));
+  pub_ = n.advertise<sensor_msgs::LaserScan>("rgbd_scan", 10, boost::bind(&DepthImageToLaserScanROS::connectCb, this, _1), boost::bind(&DepthImageToLaserScanROS::disconnectCb, this, _1));
   stair_pub_ = n.advertise<sensor_msgs::LaserScan>("stair_scan", 10);
 }
 
