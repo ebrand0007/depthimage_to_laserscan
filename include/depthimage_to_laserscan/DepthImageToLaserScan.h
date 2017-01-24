@@ -308,8 +308,8 @@ namespace depthimage_to_laserscan
       double tf_origin_z = transform.getOrigin().z();
 
       // determine lower bound and upper_bound of pixel row to scan. Starts from bottom row to the assigned scan height
-      int lower_bound = 0;
-      int upper_bound = 0 + stair_scan_height;
+      int lower_bound = 75;
+      int upper_bound = 120;
       depth_row += lower_bound * row_step; // Offset to starting pixel
 
       for(int v = lower_bound; v < upper_bound; v++, depth_row += row_step){
@@ -338,6 +338,7 @@ namespace depthimage_to_laserscan
               continue;
             }
 
+            ROS_ERROR("Lack of floor! v: %d, depth: %f, height: %f", v, r, rectified_height);
             // Calculate actual distance
 	    r = sqrt(pow(x, 2.0) + pow(z, 2.0));
 
