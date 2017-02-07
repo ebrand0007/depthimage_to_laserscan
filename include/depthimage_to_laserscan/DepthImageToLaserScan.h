@@ -280,8 +280,8 @@ namespace depthimage_to_laserscan
 		 const sensor_msgs::LaserScanPtr& scan_msg, const int& stair_scan_height) const{
       // Use correct principal point from calibration
       // Since we setup the camera upside down, the principle point shifts.
-      float center_x = depth_msg->width - cam_model.cx();
-      float center_y = depth_msg->height - cam_model.cy();
+      float center_x = cam_model.cx();
+      float center_y = cam_model.cy();
 
       // Combine unit conversion (if necessary) with scaling by focal length for computing (X,Y)
       double unit_scaling = depthimage_to_laserscan::DepthTraits<T>::toMeters( T(1) );
@@ -299,7 +299,7 @@ namespace depthimage_to_laserscan
         ROS_ERROR("%s", ex.what());
         return;
       }
-
+      //ROS_ERROR("in convert_stair");
       // store specific element we want to use
       double tf_basis_2_0 = transform.getBasis()[2][0];
       double tf_basis_2_1 = transform.getBasis()[2][1];
@@ -307,8 +307,8 @@ namespace depthimage_to_laserscan
       double tf_origin_z = transform.getOrigin().z();
 
       // determine lower bound and upper_bound of pixel row to scan. Starts from bottom row to the assigned scan height
-      int lower_bound = 75;
-      int upper_bound = 120;
+      int lower_bound = depth_msg->height -100;
+      int upper_bound = depth_msg->height -1;
       depth_row += lower_bound * row_step; // Offset to starting pixel
 
       for(int v = lower_bound; v < upper_bound; v++, depth_row += row_step){
@@ -337,7 +337,7 @@ namespace depthimage_to_laserscan
               continue;
             }
 
-            ROS_ERROR("Lack of floor! v: %d, depth: %f, height: %f", v, r, rectified_height);
+            //ROS_ERROR("Lack of floor! u: %d, v: %d, depth: %f, height: %f", u, v, r, rectified_height);
             // Calculate actual distance
 	    r = sqrt(pow(x, 2.0) + pow(z, 2.0));
 
