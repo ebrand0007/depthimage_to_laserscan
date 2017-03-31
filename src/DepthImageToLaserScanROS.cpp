@@ -35,7 +35,12 @@
 
 using namespace depthimage_to_laserscan;
   
-DepthImageToLaserScanROS::DepthImageToLaserScanROS(ros::NodeHandle& n, ros::NodeHandle& pnh):pnh_(pnh), it_(n), srv_(pnh) {
+DepthImageToLaserScanROS::DepthImageToLaserScanROS(ros::NodeHandle& n, ros::NodeHandle& pnh):pnh_(pnh), srv_(pnh),
+  image_sub_(n, "image", 1),
+  camera_info_sub_(n, "camera_info", 1),
+  pub_(n.advertise<sensor_msgs::LaserScan>("scan", 10)),
+  sync_( approximateTimePolicy(100), image_sub_, camera_info_sub_)
+{
   boost::mutex::scoped_lock lock(connect_mutex_);
   
   // Dynamic Reconfigure
@@ -43,12 +48,13 @@ DepthImageToLaserScanROS::DepthImageToLaserScanROS(ros::NodeHandle& n, ros::Node
   f = boost::bind(&DepthImageToLaserScanROS::reconfigureCb, this, _1, _2);
   srv_.setCallback(f);
   
+  sync_.registerCallback(boost::bind(&DepthImageToLaserScanROS::depthCb, this, _1, _2));
   // Lazy subscription to depth image topic
-  pub_ = n.advertise<sensor_msgs::LaserScan>("scan", 10, boost::bind(&DepthImageToLaserScanROS::connectCb, this, _1), boost::bind(&DepthImageToLaserScanROS::disconnectCb, this, _1));
+  //pub_ = n.advertise<sensor_msgs::LaserScan>("scan", 10, boost::bind(&DepthImageToLaserScanROS::connectCb, this, _1), boost::bind(&DepthImageToLaserScanROS::disconnectCb, this, _1));
 }
 
 DepthImageToLaserScanROS::~DepthImageToLaserScanROS(){
-  sub_.shutdown();
+  //sub_.shutdown();
 }
 
 
@@ -65,7 +71,7 @@ void DepthImageToLaserScanROS::depthCb(const sensor_msgs::ImageConstPtr& depth_m
     ROS_ERROR_THROTTLE(1.0, "Could not convert depth image to laserscan: %s", e.what());
   }
 }
-
+/*
 void DepthImageToLaserScanROS::connectCb(const ros::SingleSubscriberPublisher& pub) {
   boost::mutex::scoped_lock lock(connect_mutex_);
   if (!sub_ && pub_.getNumSubscribers() > 0) {
@@ -81,7 +87,7 @@ void DepthImageToLaserScanROS::disconnectCb(const ros::SingleSubscriberPublisher
     ROS_DEBUG("Unsubscribing from depth topic.");
     sub_.shutdown();
   }
-}
+}*/
 
 void DepthImageToLaserScanROS::reconfigureCb(depthimage_to_laserscan::DepthConfig& config, uint32_t level){
     dtl_.set_scan_time(config.scan_time);
